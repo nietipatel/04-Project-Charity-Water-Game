@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Water Drop Catcher</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="start-screen" class="screen">
+    <h1>💧 Water Drop Catcher</h1>
+    <p>Catch clean drops. Avoid dirty ones.</p>
+    <button id="start-button">Start Game</button>
+  </div>
+
+  <div id="game-screen" class="screen hidden">
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+    <div id="score">Score: 0</div>
+  </div>
+
+  <div id="game-over-screen" class="screen hidden">
+    <h2>Game Over</h2>
+    <p id="final-score">Your Score: 0</p>
+    <p class="fact">💡 1 in 10 people lack access to clean water.</p>
+    <button id="restart-button">Play Again</button>
+  </div>
+
+  <script src="js/bucket.js"></script>
+  <script src="js/droplet.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
