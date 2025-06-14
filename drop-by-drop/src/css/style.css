@@ -1,0 +1,123 @@
+/* 
+  CSS Styles for the "Drop by Drop" Game
+  This file contains styles for layout, colors, fonts, and responsive design rules.
+*/
+
+/* General Styles */
+body {
+    margin: 0;
+    font-family: 'Arial', sans-serif;
+    background-color: #e0f7fa; /* Light blue background */
+    color: #004d40; /* Dark teal text */
+}
+
+/* Start Screen */
+.start-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+}
+
+.start-screen h1 {
+    font-size: 3em;
+    margin-bottom: 20px;
+}
+
+.start-button {
+    padding: 15px 30px;
+    font-size: 1.5em;
+    background-color: #00796b; /* Teal button */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.start-button:hover {
+    background-color: #004d40; /* Darker teal on hover */
+}
+
+/* Gameplay Screen */
+.gameplay-screen {
+    position: relative;
+    overflow: hidden;
+    height: 100vh;
+}
+
+.droplet {
+    position: absolute;
+    bottom: 50px; /* Initial position */
+    width: 50px; /* Adjust size as needed */
+}
+
+.collectible, .obstacle {
+    position: absolute;
+}
+
+/* Score and Progress Bar */
+.score {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    font-size: 1.5em;
+}
+
+.progress-bar {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 200px;
+    height: 20px;
+    background-color: #b2dfdb; /* Light teal */
+    border: 1px solid #004d40; /* Dark teal border */
+}
+
+/* Game Over Screen */
+.game-over-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+}
+
+.game-over-screen h2 {
+    font-size: 2em;
+}
+
+.restart-button, .share-button {
+    padding: 10px 20px;
+    font-size: 1.2em;
+    background-color: #00796b; /* Teal button */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin: 10px;
+}
+
+.restart-button:hover, .share-button:hover {
+    background-color: #004d40; /* Darker teal on hover */
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+    .start-screen h1 {
+        font-size: 2em;
+    }
+
+    .start-button, .restart-button, .share-button {
+        font-size: 1em;
+        padding: 10px 20px;
+    }
+
+    .score {
+        font-size: 1em;
+    }
+
+    .progress-bar {
+        width: 150px;
+    }
+}

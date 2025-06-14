@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Drop by Drop</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #e0f7fa;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .screen {
+      position: absolute;
+      top: 0; left: 0;
+      width: 400px;
+      height: 600px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 20px;
+      z-index: 10;
+    }
+    #game-screen {
+      position: relative;
+      width: 400px;
+      height: 600px;
+      background: #a2d5f2;
+      border-radius: 12px;
+      overflow: hidden;
+      z-index: 5;
+      display: none;
+      flex-direction: column;
+      justify-content: flex-start;
+      padding-top: 10px;
+    }
+    #gameCanvas {
+      background: #0077be;
+      border-radius: 0 0 12px 12px;
+      display: block;
+      margin: 0 auto;
+      width: 100%;
+      height: 500px;
+    }
+    .hidden {
+      display: none !important;
+    }
+    button {
+      cursor: pointer;
+      padding: 10px 20px;
+      margin: 8px;
+      border: none;
+      border-radius: 5px;
+      background: #0288d1;
+      color: white;
+      font-size: 16px;
+    }
+    button:hover {
+      background: #0277bd;
+    }
+    #score-container {
+      font-size: 18px;
+      margin: 10px 0;
+      color: #fff;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 15px;
+    }
+    #pause-button, #mute-button {
+      margin: 5px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Start Screen -->
+  <div id="start-screen" class="screen">
+    <h1>Drop by Drop</h1>
+    <button id="start-button">Start Game</button>
+    <a href="#" id="info-link">Game Info</a>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="game-screen">
+    <canvas id="gameCanvas" width="400" height="500"></canvas>
+    <div id="score-container">
+      <span id="score">Score: 0</span>
+      <div id="progress-bar"></div>
+    </div>
+    <div>
+      <button id="pause-button">Pause</button>
+      <button id="mute-button">Mute</button>
+    </div>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div id="game-over-screen" class="screen hidden">
+    <h2>Game Over</h2>
+    <p id="final-score">Your Score: 0</p>
+    <p id="clean-water-fact"></p>
+    <button id="restart-button">Restart</button>
+    <button id="share-button">Share</button>
+  </div>
+
+  <!-- Script order is important! -->
+  <script src="js/droplet.js"></script>
+  <script src="js/obstacles.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
