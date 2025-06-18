@@ -3,10 +3,10 @@
 
 // --- Game Logic ---
 const LEVELS = [
-  { grid: [4, 4], speed: 1200 },
-  { grid: [5, 5], speed: 900 },
-  { grid: [6, 6], speed: 700 },
-  { grid: [7, 7], speed: 500 }
+  { grid: [4, 4], speed: 1000 }, // 20s for 20 ticks (1000ms * 20 = 20,000ms)
+  { grid: [5, 5], speed: 1000 },
+  { grid: [6, 6], speed: 1000 },
+  { grid: [7, 7], speed: 1000 }
 ];
 
 let currentLevel = 0;
@@ -35,13 +35,14 @@ function rotateConnects(connects, rotation) {
 const COLLECTIBLE = '💧';
 const OBSTACLE = '☠️';
 let isMuted = false;
+let isPaused = false;
 
 function showStartScreen() {
   const container = document.getElementById('game-container');
   container.innerHTML = `
     <header>
-      <img id="charitywater-logo" src="https://www.charitywater.org/images/logos/cw-logo--icon.svg" alt="charity: water logo" />
-      <span style="font-size:1.5em;font-weight:bold;vertical-align:middle;">AquaFlow</span>
+      <img id="charitywater-logo" src="https://d11sa1anfvm2xk.cloudfront.net/media/downloads/logos/cw_vertical_white.jpg" alt="charity: water logo" style="height:96px;width:auto;vertical-align:middle;" />
+      <span style="font-size:2em;font-weight:bold;vertical-align:middle;color:#0099e5;text-shadow:0 2px 12px #b3e6ff;letter-spacing:2.5px;">AquaFlow: The Water Pipe Challenge</span>
     </header>
     <p>Guide the water through the pipes!<br>Don’t let it leak!</p>
     <a class="info-link" href="https://www.charitywater.org/" target="_blank">Learn about charity: water</a>
@@ -65,18 +66,20 @@ function renderLevel() {
   const container = document.getElementById('game-container');
   container.innerHTML = `
     <header>
-      <img id="charitywater-logo" src="https://www.charitywater.org/images/logos/cw-logo--icon.svg" alt="charity: water logo" />
-      <span style="font-size:1.2em;font-weight:bold;vertical-align:middle;">AquaFlow</span>
+      <img id="charitywater-logo" src="https://d11sa1anfvm2xk.cloudfront.net/media/downloads/logos/cw_vertical_white.jpg" alt="charity: water logo" style="height:72px;width:auto;vertical-align:middle;" />
+      <span style="font-size:1.7em;font-weight:bold;vertical-align:middle;color:#0099e5;text-shadow:0 2px 8px #b3e6ff;letter-spacing:2px;">AquaFlow: The Water Pipe Challenge</span>
       <a class="info-link" href="https://www.charitywater.org/" target="_blank" style="float:right;font-size:0.9em;">charity: water</a>
     </header>
     <div id="level">Level ${currentLevel + 1}</div>
-    <div id="score">Score: <span id="score-val">0</span></div>
     <div id="pipe-grid"></div>
     <div id="progress-bar"><div id="progress"></div></div>
     <div id="message"></div>
     <button class="button" id="pause-btn" type="button">Pause</button>
     <button class="button" id="next-level-btn" type="button">Next Level</button>
   `;
+  // Reset timer/progress bar
+  const progressBar = document.getElementById('progress');
+  if (progressBar) progressBar.style.width = '0%';
   renderPipeGrid(grid[0], grid[1]);
   document.getElementById('pause-btn').onclick = pauseGame;
   const nextBtn = document.getElementById('next-level-btn');
@@ -89,6 +92,7 @@ function renderLevel() {
       showWinScreen();
     }
   };
+  showRestartButton();
   updateNextLevelButton();
 }
 
@@ -117,10 +121,20 @@ function renderPipeGrid(rows, cols) {
           cellType = 'end';
           typeIdx = 1;
           rotation = 0;
-        } else {
+        } else if (Array.isArray(layout[r][c])) {
           typeIdx = layout[r][c][0];
           rotation = layout[r][c][1];
           symbol = PIPE_TYPES[typeIdx].symbol;
+        } else {
+          typeIdx = layout[r][c];
+          symbol = PIPE_TYPES[typeIdx].symbol;
+          // For levels 2-4, ensure all path pipes start at a random rotation that is NOT correct
+          if (currentLevel >= 1) {
+            let wrongRotations = [0, 90, 180, 270].filter(rot => rot !== 0);
+            rotation = wrongRotations[Math.floor(Math.random() * wrongRotations.length)];
+          } else {
+            rotation = Math.floor(Math.random() * 4) * 90;
+          }
         }
       } else {
         // Fill with a random dead-end pipe (not a skull)
@@ -141,13 +155,6 @@ function renderPipeGrid(rows, cols) {
       pipeGrid[r][c] = { typeIdx, symbol, cellType, rotation };
     }
   }
-  // Set start and end
-  grid.children[0].textContent = '🚰';
-  grid.children[0].style.transform = 'rotate(0deg)';
-  pipeGrid[0][0] = { typeIdx: 1, symbol: '🚰', cellType: 'start', rotation: 0 };
-  grid.children[grid.children.length - 1].textContent = '🏁';
-  grid.children[grid.children.length - 1].style.transform = 'rotate(0deg)';
-  pipeGrid[rows-1][cols-1] = { typeIdx: 1, symbol: '🏁', cellType: 'end', rotation: 0 };
 }
 
 function rotatePipe(cell) {
@@ -166,7 +173,6 @@ function updateNextLevelButton() {
     cell.classList.remove('path-correct', 'path-incorrect');
   });
   const rows = pipeGrid.length, cols = pipeGrid[0].length;
-  const layout = LEVEL_LAYOUTS[currentLevel];
   let queue = [{ r: 0, c: 0, from: null, path: [] }];
   let visited = Array.from({ length: rows }, () => Array(cols).fill(false));
   let found = false;
@@ -205,10 +211,10 @@ function updateNextLevelButton() {
       }
     }
   }
-  // Only require the path to be found (unique solution), not all solution cells
   if (found) {
     nextBtn.disabled = false;
     msg.textContent = 'Correct! You can go to the next level.';
+    showLevelPopup();
     lastPath.forEach(({ r, c }) => {
       const domCell = document.querySelector(`.pipe-cell[data-row='${r}'][data-col='${c}']`);
       if (domCell) domCell.classList.add('path-correct');
@@ -270,20 +276,17 @@ function startWaterFlow() {
     const result = canWaterFlowWithEffects();
     if (result.success) {
       clearInterval(intervalId);
-      // Instantly go to next level or win
-      setTimeout(() => nextLevelOrWin(), 600); // short delay for feedback
+      setTimeout(() => nextLevelOrWin(), 600);
       return;
     }
     if (!result.success) {
       clearInterval(intervalId);
-      // Shake the grid on obstacle
       const grid = document.getElementById('pipe-grid');
       grid.classList.add('grid-shake');
       setTimeout(() => grid.classList.remove('grid-shake'), 400);
       gameOver();
       return;
     }
-    // Update score for collectibles
     if (result.collected > collected) {
       score += (result.collected - collected) * 10;
       document.getElementById('score-val').textContent = score;
@@ -292,7 +295,14 @@ function startWaterFlow() {
     }
     if (progress >= 100) {
       clearInterval(intervalId);
-      nextLevelOrWin();
+      // If not solved, show timeout game over
+      const solved = canWaterFlowWithEffects().success;
+      if (!solved) {
+        showLevelPopup('timeout');
+        setTimeout(() => gameOver(true), 2500);
+      } else {
+        nextLevelOrWin();
+      }
     }
   }, speed);
 }
@@ -325,9 +335,11 @@ function showMilestone(score) {
 // --- Animated water droplet on path ---
 function highlightWaterPath() {
   document.querySelectorAll('.active-pipe').forEach(cell => cell.classList.remove('active-pipe', 'droplet'));
+  document.querySelectorAll('.solution-path').forEach(cell => cell.classList.remove('solution-path'));
   const rows = pipeGrid.length, cols = pipeGrid[0].length;
   let queue = [{ r: 0, c: 0, from: null, path: [] }];
   let visited = Array.from({ length: rows }, () => Array(cols).fill(false));
+  let solutionPath = [];
   while (queue.length) {
     const { r, c, from, path } = queue.shift();
     if (visited[r][c]) continue;
@@ -336,18 +348,18 @@ function highlightWaterPath() {
     const newPath = [...path, { r, c }];
     if (cell.cellType === 'obstacle') return;
     if (cell.cellType === 'end') {
-      newPath.forEach(({ r, c }, i) => {
+      solutionPath = newPath;
+      newPath.forEach(({ r, c }) => {
         const domCell = document.querySelector(`.pipe-cell[data-row='${r}'][data-col='${c}']`);
         if (domCell) {
           domCell.classList.add('active-pipe');
-          if (i === newPath.length - 2) domCell.classList.add('droplet'); // droplet before end
         }
       });
-      return;
+      break;
     }
     let connects = [];
     if (cell.cellType === 'pipe' || cell.cellType === 'start') {
-      connects = PIPE_TYPES[cell.typeIdx].connects;
+      connects = rotateConnects(PIPE_TYPES[cell.typeIdx].connects, cell.rotation);
     }
     for (const dir of connects) {
       let nr = r, nc = c, back = null;
@@ -359,13 +371,19 @@ function highlightWaterPath() {
         const neighbor = pipeGrid[nr][nc];
         let neighborConnects = [];
         if (neighbor.cellType === 'pipe' || neighbor.cellType === 'end') {
-          neighborConnects = PIPE_TYPES[neighbor.typeIdx].connects;
+          neighborConnects = rotateConnects(PIPE_TYPES[neighbor.typeIdx].connects, neighbor.rotation);
         }
         if (neighborConnects.includes(back) || neighbor.cellType === 'end') {
           queue.push({ r: nr, c: nc, from: dir, path: newPath });
         }
       }
     }
+  }
+  if (solutionPath.length) {
+    solutionPath.forEach(({ r, c }) => {
+      const domCell = document.querySelector(`.pipe-cell[data-row='${r}'][data-col='${c}']`);
+      if (domCell) domCell.classList.add('solution-path');
+    });
   }
 }
 
@@ -392,7 +410,7 @@ function showWinScreen() {
   const container = document.getElementById('game-container');
   container.innerHTML = `
     <header>
-      <img id="charitywater-logo" src="https://www.charitywater.org/images/logos/cw-logo--icon.svg" alt="charity: water logo" />
+      <img id="charitywater-logo" src="https://d11sa1anfvm2xk.cloudfront.net/media/downloads/logos/cw_vertical_white.jpg" alt="charity: water logo" style="height:48px;width:auto;vertical-align:middle;" />
       <span style="font-size:1.2em;font-weight:bold;vertical-align:middle;">AquaFlow</span>
       <a class="info-link" href="https://www.charitywater.org/" target="_blank" style="float:right;font-size:0.9em;">charity: water</a>
     </header>
@@ -406,25 +424,56 @@ function showWinScreen() {
   setupUI();
 }
 
-function gameOver() {
+function gameOver(isTimeout = false) {
   gameState = 'gameover';
   if (intervalId) clearInterval(intervalId);
-  const container = document.getElementById('game-container');
-  container.innerHTML += `
-    <div id="message">Game Over! Water was lost.</div>
-    <div style="margin:12px 0;">Did you know? ${getRandomFact()}</div>
-    <button class="button" id="retry-btn">Retry Level</button>
+  // Create a modal overlay
+  let modal = document.createElement('div');
+  modal.id = 'gameover-modal';
+  modal.style.position = 'fixed';
+  modal.style.top = 0;
+  modal.style.left = 0;
+  modal.style.width = '100vw';
+  modal.style.height = '100vh';
+  modal.style.background = 'rgba(0,0,0,0.6)';
+  modal.style.display = 'flex';
+  modal.style.flexDirection = 'column';
+  modal.style.justifyContent = 'center';
+  modal.style.alignItems = 'center';
+  modal.style.zIndex = 1000;
+  let scoreText = `Score: ${currentLevel}/${LEVELS.length}`;
+  modal.innerHTML = `
+    <div style="background:#fff;padding:32px 24px;border-radius:12px;box-shadow:0 4px 24px #0003;text-align:center;max-width:90vw;">
+      <div id="message" style="font-size:1.5em;font-weight:bold;">You lost!</div>
+      <div style="margin:12px 0;">${isTimeout ? 'Time ran out!' : 'Water was lost.'}</div>
+      <div style="margin:12px 0;">${scoreText}</div>
+      <div style="margin:12px 0;">Did you know? ${getRandomFact()}</div>
+      <button class="button" id="restart-btn">Restart</button>
+    </div>
   `;
-  addShareButton(container);
-  document.getElementById('retry-btn').onclick = () => startGame(currentLevel);
+  document.body.appendChild(modal);
+  document.getElementById('restart-btn').onclick = () => {
+    modal.remove();
+    showStartScreen();
+  };
   setupUI();
 }
 
 function pauseGame() {
-  if (intervalId) {
-    clearInterval(intervalId);
-    intervalId = null;
-    document.getElementById('message').textContent = 'Paused. Click Test Path or Start to continue.';
+  const pauseBtn = document.getElementById('pause-btn');
+  if (!isPaused) {
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+      document.getElementById('message').textContent = 'Paused. Click Unpause to continue.';
+    }
+    isPaused = true;
+    if (pauseBtn) pauseBtn.textContent = 'Unpause';
+  } else {
+    startWaterFlow();
+    document.getElementById('message').textContent = '';
+    isPaused = false;
+    if (pauseBtn) pauseBtn.textContent = 'Pause';
   }
 }
 
@@ -459,6 +508,22 @@ function setupUI() {
   if (restartBtn) restartBtn.onclick = () => showStartScreen();
 }
 
+function showRestartButton() {
+  let btn = document.getElementById('restart-btn');
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.className = 'button';
+    btn.id = 'restart-btn';
+    btn.textContent = 'Restart';
+    btn.style.marginTop = '8px';
+    btn.onclick = () => showStartScreen();
+    const pauseBtn = document.getElementById('pause-btn');
+    if (pauseBtn && pauseBtn.parentNode) {
+      pauseBtn.parentNode.insertBefore(btn, pauseBtn.nextSibling);
+    }
+  }
+}
+
 // Patch all UI renders to call setupUI after rendering
 const _renderLevel = renderLevel;
 renderLevel = function() { _renderLevel.apply(this, arguments); setupUI(); };
@@ -476,38 +541,69 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- Predefined level layouts for unique solutions ---
 const LEVEL_LAYOUTS = [
-  // Level 1: 4x4 (fixed: unique rotatable path)
+  // Level 1: 4x4 (zig-zag, last pipe turns down to end)
   [
-    ['start', [1,0], [3,270], [1,0]],
-    [null, null, [0,90], null],
-    [null, null, [2,180], null],
-    [null, null, [1,0], 'end']
+    ['start', 1, 3, null],
+    [null, null, 0, null],
+    [null, null, 4, 2],
+    [null, null, null, 'end']
   ],
-  // Level 2: 5x5
+  // Level 2: 5x5 (continuous, exactly 4 turns, (2,4) turns down, (3,4) is vertical)
   [
-    ['start', [1,0], [1,0], [2,0], null],
-    [null, null, [4,0], null, null],
-    [null, null, [1,0], [2,0], [1,0]],
-    [null, null, null, null, [1,0]],
+    ['start', 1, 1, 3, null],
+    [null, null, null, 0, null],
+    [null, null, null, 4, 3],
+    [null, null, null, null, 0],
     [null, null, null, null, 'end']
   ],
-  // Level 3: 6x6
+  // Level 3: 6x6 (precise snake with correct turns)
   [
-    ['start', [1,0], [1,0], [2,0], null, null],
-    [null, null, [4,0], null, null, null],
-    [null, null, [1,0], [2,0], [1,0], null],
-    [null, null, null, null, [1,0], null],
-    [null, null, null, null, [1,0], [2,0]],
+    ['start', 1, 1, 1, 1, 3],
+    [null, null, null, null, null, 0],
+    [5, 1, 1, 1, 1, 2],
+    [0, null, null, null, null, null],
+    [4, 1, 1, 1, 1, 4],
     [null, null, null, null, null, 'end']
   ],
-  // Level 4: 7x7
+  // Level 4: 7x7 (complex snake, end-to-end)
   [
-    ['start', [1,0], [1,0], [2,0], null, null, null],
-    [null, null, [4,0], null, null, null, null],
-    [null, null, [1,0], [2,0], [1,0], null, null],
-    [null, null, null, null, [1,0], null, null],
-    [null, null, null, null, [1,0], [2,0], [1,0]],
-    [null, null, null, null, null, null, [1,0]],
-    [null, null, null, null, null, null, 'end']
+    ['start', 1, 1, 1, 1, 1, 3],
+    [0, null, null, null, null, null, 0],
+    [4, 1, 1, 1, 1, 1, 2],
+    [0, null, null, null, null, null, 0],
+    [4, 1, 1, 1, 1, 1, 3],
+    [0, null, null, null, null, null, 0],
+    [4, 1, 1, 1, 1, 1, 'end']
   ]
 ];
+
+function showLevelPopup(type) {
+  // Remove any existing popup
+  let old = document.getElementById('level-popup');
+  if (old) old.remove();
+  const popup = document.createElement('div');
+  popup.id = 'level-popup';
+  popup.style.position = 'fixed';
+  popup.style.top = '50%';
+  popup.style.left = '50%';
+  popup.style.transform = 'translate(-50%, -50%)';
+  popup.style.background = 'rgba(255,255,255,0.97)';
+  popup.style.border = '2px solid #00aaff';
+  popup.style.borderRadius = '16px';
+  popup.style.padding = '32px 40px';
+  popup.style.fontSize = '1.5em';
+  popup.style.fontWeight = 'bold';
+  popup.style.color = '#0077b6';
+  popup.style.boxShadow = '0 4px 32px rgba(0,0,0,0.18)';
+  popup.style.zIndex = 2000;
+  if (type === 'timeout') {
+    popup.textContent = 'You Lost!';
+  } else if (currentLevel < LEVELS.length - 1) {
+    popup.textContent = 'Correct! Now hit next level to continue!';
+  } else {
+    popup.textContent = 'Congrats you have completed 4/4 levels!';
+  }
+  document.body.appendChild(popup);
+  // Always show for 2.5s, even if level changes
+  setTimeout(() => { if (popup.parentNode) popup.remove(); }, 2500);
+}
